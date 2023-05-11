@@ -1,0 +1,68 @@
+---
+title: "metaphlan4 comparison"
+author: "charlee cobb"
+date: "4/17/2023"
+output: html_document
+---
+
+Read in abundance table files for 
+```{r}
+
+metaphlan2_abundance <- read.delim("~/Documents/previous_Gowanaus_Pilot_ABCDEF50ng.merged.metaphlan2_merged_abundance_table_species (1).txt")
+head(metaphlan2_abundance)
+
+metaphlan4_abundance <- read.delim("~/Documents/clean_sample_control_raw_metaphlan4_merged_abundance_table.txt")
+head(metaphlan4_abundance)
+```
+
+
+Find overlap of species with Venn diagram
+```{r}
+
+library(VennDiagram)
+#metaphlan2 > m2
+#metaphlan4 > m4
+#useful tutorial: https://www.youtube.com/watch?v=saFyipc7Wd8
+
+m2_species_list <- metaphlan2_abundance$s__Methanosaeta_concilii
+m4_species_list <- metaphlan4_abundance$clade_name
+
+
+colors <- c ("#6b7fff", "#ff4059")
+venn.diagram(x = list(m2_species_list, m4_species_list),
+             category.names = c("Metaphlan 2", "Metaphlan 4"),
+             filename = "metaphlan2_4_venn.png",
+             output=TRUE,
+             imagetype = "png",
+             scaled=FALSE,
+             col="black",
+             fill=colors,
+             cat.col = colors,
+             cat.cex =2,
+             margin=0.15)
+
+```
+
+
+Pull list of overlapping species, compare abundance levels
+```{r}
+library(tibble)
+library(tidyverse)
+library(dplyr)
+overlapping_species <- intersect(metaphlan2_abundance$s__Methanosaeta_concilii, metaphlan4_abundance$clade_name)
+head(overlapping_species)
+
+#metaphlan2 > m2
+#metaphlan4 > m4
+
+m2_common <- metaphlan2_abundance[metaphlan2_abundance$s__Methanosaeta_concilii %in% overlapping_species, ] 
+m4_common <- metaphlan4_abundance[metaphlan4_abundance$clade_name %in% overlapping_species, ]
+
+
+m2_common[order(m2_common$s__Methanosaeta_concilii), ]
+m4_common[order(m4_common$clade_name), ]
+
+head(m2_common)
+head(m4_common)
+```
+

@@ -1,0 +1,110 @@
+---
+title: "NYC Plant Data"
+author: "charlee cobb"
+date: "2/21/2023"
+output: html_document
+---
+Read in csv of plant data and park code data
+```{r}
+plant_entitation <- read.csv("Entitation.csv")
+parks <- read.csv("Parks_Properties.csv")
+
+head(plant_entitation)
+head(parks)
+```
+
+
+**Loking at only Forest Hills Area Parks**
+From parks we need PROPNAME and GISPROPNUM of parks in Forest Hills area. 
+Target parks: Flushing Meadows Corona Park, Forest Park, Maple Grove Cemetery, St.John Cemetery, Juniper Valley Park, Gardens Rodelberg Park, Hawthorne Park Forest Hills, Flag Pole Green, MacDonald Park, Yellowstone Park, Kissena Park, Cunningham Park
+```{r}
+library(dplyr)
+target_parks <-c("Flushing Meadows Corona Park", "Forest Park", "Maple Grove Cemetery", "St.John Cemetery", "Juniper Valley Park", "Gardens Rodelberg Park", "Hawthorne Park Forest Hills", "Flag Pole Green", "MacDonald Park", "Yellowstone Park", "Kissena Park", "Cunningham Park")
+l <- parks[parks$SIGNNAME %in% target_parks, ]
+#subset the parks and only get property and gispropnum
+forest_hills_area_parks <- select(l, GISPROPNUM, SIGNNAME)
+forest_hills_area_parks %>% distinct()
+```
+
+Add a QUEID column based on the 'forest_hills_area_parks$GISPROPNUM' 
+```{r}
+#fix this, it's only pulling Q021
+grep("Q015", plant_entitation$UEID)
+ls <- forest_hills_area_parks$GISPROPNUM
+ls
+
+for(i in ls){
+  if(grepl(i, plant_entitation$UEID, ignore.case = TRUE)){
+    plant_entitation$QUEID <- i}
+  else{
+    print(i)
+  }}
+
+
+
+#checking to see if QUEID column and value are added
+head(plant_entitation)
+#check for forest park in QUEID
+grep("Q015", plant_entitation$QUEID)
+
+#merge dataframes, select QUEID, Parkname (SIGNNAME), 6 record names, 6 corresponding latin names, and 6 corresponding native status 
+forest_hills_plant_entitation <- select(merge(plant_entitation, forest_hills_area_parks, by.x = "QUEID", by.y = "GISPROPNUM"),
+                                        QUEID, SIGNNAME, RecordedName1, LatinName1, NativeStatus1, RecordedName2, LatinName2,
+                                        NativeStatus2, RecordedName3, LatinName3, NativeStatus3, RecordedName4, LatinName4,
+                                        NativeStatus4,
+                                        RecordedName5, LatinName5, NativeStatus5, RecordedName6, LatinName6,
+                                        NativeStatus6)
+
+
+```
+
+
+get only forest park out!
+```{r}
+library(MASS) 
+library(reshape2) 
+library(reshape)
+library(dplyr)
+
+#pull forest park data out of plant entitation. Doing this here because
+#it didn't work in the above block, and we know "Q015" is Forest Park
+forest_park <- plant_entitation[grep("Q015", plant_entitation$UEID), ]
+head(forest_park)
+
+
+#pull all record names, latin names, height, and native status
+forest_park <- select(forest_park, RecordedName1, LatinName1, Height1, NativeStatus1, RecordedName2, LatinName2, Height2,
+                                        NativeStatus2, RecordedName3, LatinName3, Height3, NativeStatus3, RecordedName4, LatinName4,
+                                        Height4, NativeStatus4, RecordedName5, LatinName5, Height5, NativeStatus5, RecordedName6, LatinName6,
+                                        Height6, NativeStatus6)
+head(forest_park)
+
+
+#make column names so we can melt the data into 4 columns: Common_Name", "Latin_Name", "Height", "Native_Status"
+new_col_names <- c("Common_Name", "Latin_Name", "Height", "Native_Status",
+                   "Common_Name", "Latin_Name", "Height", "Native_Status",
+                   "Common_Name", "Latin_Name", "Height", "Native_Status",
+                   "Common_Name", "Latin_Name", "Height", "Native_Status",
+                   "Common_Name", "Latin_Name", "Height", "Native_Status",
+                   "Common_Name", "Latin_Name", "Height", "Native_Status")
+colnames(forest_park) <- new_col_names
+head(forest_park)
+
+#melt data
+melt_forest_park <- melt(forest_park, id = c("Common_Name", "Latin_Name", "Height", "Native_Status"))
+head(melt_forest_park)
+
+#get rid of duplicates
+forest_park_with_Height_plants_under_30 <- melt_forest_park[melt_forest_park$Height != ">30'", ]
+no_repeats_forest_park_with_Height_plants_under_30 <- forest_park_with_Height_plants_under_30 %>% distinct()
+write.csv(no_repeats_forest_park_with_Height_plants_under_30, "forest_park_plants_with_heights.csv")
+
+
+
+#height enteries are really weired, there are multiple plant entries with different heights
+#and height ranges, so just removing height all together
+forest_park_no_height <- melt_forest_park[,c("Common_Name", "Latin_Name", "Native_Status")]
+no_repeats_forest_park_no_height <- forest_park_no_height %>% distinct()
+write.csv(no_repeats_forest_park_no_height, "forest_park_plants_without_heights.csv")
+
+```
